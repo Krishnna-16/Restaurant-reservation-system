@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Reservations — Fork & Flames</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div id="toast-container"></div>
+
+<!-- ── Topbar ── -->
+<header class="topbar">
+  <a class="topbar-brand" href="#">
+    <span class="brand-icon">🍽️</span>
+    Fork & Flames
+  </a>
+  <div class="topbar-right">
+    <div class="user-badge">
+      <span id="userNameDisplay">—</span>
+      <span class="role-tag">Customer</span>
+    </div>
+    <button class="btn btn-logout" id="logoutBtn">Sign Out</button>
+  </div>
+</header>
+
+<!-- ── Dashboard ── -->
+<div class="dashboard">
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <ul class="sidebar-menu">
+      <li><a href="#" class="active" data-section="sec-overview">
+        <span class="menu-icon">🏠</span> Overview
+      </a></li>
+      <li><a href="#" data-section="sec-reserve">
+        <span class="menu-icon">📅</span> New Reservation
+      </a></li>
+      <li><a href="#" data-section="sec-my-reservations">
+        <span class="menu-icon">📋</span> My Reservations
+      </a></li>
+    </ul>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="content-area">
+
+    <!-- ── Overview ── -->
+    <section class="content-section active" id="sec-overview">
+      <div class="section-header">
+        <div>
+          <h2 class="section-title">Good evening 👋</h2>
+          <p class="section-subtitle">Welcome to Fork & Flames. What would you like to do today?</p>
+        </div>
+        <button class="btn btn-gold" onclick="navigateTo('sec-reserve')">+ New Reservation</button>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-grid" id="customerStats">
+        <div class="stat-card">
+          <div class="stat-icon">📋</div>
+          <div class="stat-info">
+            <div class="stat-value" id="myTotal">—</div>
+            <div class="stat-label">Total Reservations</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🔵</div>
+          <div class="stat-info">
+            <div class="stat-value" id="myReserved">—</div>
+            <div class="stat-label">Upcoming</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🪑</div>
+          <div class="stat-info">
+            <div class="stat-value" id="vacantCount">—</div>
+            <div class="stat-label">Vacant Tables</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🟢</div>
+          <div class="stat-info">
+            <div class="stat-value" id="myCompleted">—</div>
+            <div class="stat-label">Completed Visits</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Available Tables Preview -->
+      <div class="card" style="margin-top:1rem;">
+        <div class="card-header">
+          <span class="card-title">🪑 Available Tables</span>
+          <button class="btn btn-ghost btn-sm" onclick="loadTables()">Refresh</button>
+        </div>
+        <div class="table-grid" id="tablesGrid">
+          <div style="text-align:center;padding:2rem;color:var(--text-muted)"><span class="spinner"></span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── New Reservation ── -->
+    <section class="content-section" id="sec-reserve">
+      <div class="section-header">
+        <div>
+          <h2 class="section-title">New Reservation</h2>
+          <p class="section-subtitle">Book your table at Fork & Flames</p>
+        </div>
+      </div>
+
+      <div class="card card-gold" style="max-width:560px;">
+        <div class="card-header">
+          <span class="card-title">📅 Reservation Details</span>
+        </div>
+
+        <div class="form-group">
+          <label>Full Name</label>
+          <input type="text" id="resName" class="form-control" placeholder="e.g. Krishnna" />
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Date</label>
+            <input type="date" id="resDate" class="form-control" />
+          </div>
+          <div class="form-group">
+            <label>Time</label>
+            <input type="time" id="resTime" class="form-control" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Number of Guests</label>
+          <select id="resGuests" class="form-control">
+            <option value="1">1 Guest</option>
+            <option value="2" selected>2 Guests</option>
+            <option value="3">3 Guests</option>
+            <option value="4">4 Guests</option>
+            <option value="5">5 Guests</option>
+            <option value="6">6 Guests</option>
+            <option value="7">7 Guests</option>
+            <option value="8">8 Guests</option>
+          </select>
+        </div>
+
+        <div id="availNote" style="display:none; padding:0.7rem 1rem; background:var(--gold-dim); border:1px solid rgba(201,168,76,0.2); border-radius:var(--radius-sm); font-size:0.85rem; color:var(--gold-light); margin-bottom:1rem;"></div>
+
+        <button class="btn btn-gold btn-lg" style="width:100%;" id="submitResBtn" onclick="submitReservation()">
+          Confirm Reservation
+        </button>
+      </div>
+    </section>
+
+    <!-- ── My Reservations ── -->
+    <section class="content-section" id="sec-my-reservations">
+      <div class="section-header">
+        <div>
+          <h2 class="section-title">My Reservations</h2>
+          <p class="section-subtitle">Your booking history</p>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="loadMyReservations()">↻ Refresh</button>
+      </div>
+
+      <div class="card">
+        <div id="myReservationsContainer">
+          <div style="text-align:center;padding:2rem;"><span class="spinner"></span></div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- Pay Modal -->
+<div class="modal-overlay" id="payModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>💳 Confirm Payment</h3>
+      <button class="modal-close" onclick="closeModal('payModal')">✕</button>
+    </div>
+    <p style="color:var(--text-muted); margin-bottom:1rem; font-size:0.9rem;">You are about to pay the bill for your reservation.</p>
+    <div id="payDetails" style="background:var(--glass); border-radius:var(--radius-sm); padding:1rem; margin-bottom:1rem; font-size:0.9rem; line-height:1.8;"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('payModal')">Cancel</button>
+      <button class="btn btn-gold" id="confirmPayBtn">Pay Now</button>
+    </div>
+  </div>
+</div>
+
+<script src="script.js"></script>
+<script>
+let currentUser = null;
+let myReservations = [];
+let pendingPayId = null;
+
+window.addEventListener("DOMContentLoaded", async () => {
+  currentUser = Session.require("customer");
+  if (!currentUser) return;
+
+  document.getElementById("userNameDisplay").textContent = currentUser.username;
+  initSidebar();
+  initLogout();
+
+  // Set default date to today
+  document.getElementById("resDate").value = new Date().toISOString().split("T")[0];
+  document.getElementById("resTime").value = "19:00";
+  document.getElementById("resName").value = currentUser.username;
+
+  await Promise.all([loadMyReservations(), loadTables()]);
+  updateStats();
+});
+
+// ── Load Tables ──────────────────────────────────────────────
+async function loadTables() {
+  const grid = document.getElementById("tablesGrid");
+  grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:1rem;"><span class="spinner"></span></div>';
+  try {
+    const tables = await api("GET", "/tables");
+    const vacant = tables.filter(t => t.status === "Vacant");
+    document.getElementById("vacantCount").textContent = vacant.length;
+
+    if (tables.length === 0) {
+      grid.innerHTML = '<div class="empty-state"><div class="empty-icon">🪑</div><p>No tables found</p></div>';
+      return;
+    }
+
+    grid.innerHTML = tables.map(t => `
+      <div class="table-card ${t.status.toLowerCase()}">
+        <div class="table-icon">${t.status === 'Vacant' ? '🟢' : t.status === 'Occupied' ? '🔴' : '🔵'}</div>
+        <div class="table-label">${t.label}</div>
+        <div class="table-cap">Seats ${t.capacity}</div>
+        <div style="margin-top:0.5rem;">${statusBadge(t.status)}</div>
+      </div>
+    `).join("");
+  } catch (e) {
+    grid.innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><p>Failed to load tables</p></div>';
+    showToast("Failed to load tables", "error");
+  }
+}
+
+// ── Load My Reservations ─────────────────────────────────────
+async function loadMyReservations() {
+  const container = document.getElementById("myReservationsContainer");
+  container.innerHTML = '<div style="text-align:center;padding:2rem;"><span class="spinner"></span></div>';
+  try {
+    myReservations = await api("GET", `/reservations?userId=${currentUser.id}`);
+    renderMyReservations();
+    updateStats();
+  } catch (e) {
+    container.innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><p>Failed to load reservations</p></div>';
+    showToast("Failed to load reservations", "error");
+  }
+}
+
+function renderMyReservations() {
+  const container = document.getElementById("myReservationsContainer");
+  if (myReservations.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">📋</div>
+        <p>No reservations yet. <a href="#" onclick="navigateTo('sec-reserve')" style="color:var(--gold);">Make one now!</a></p>
+      </div>`;
+    return;
+  }
+
+  container.innerHTML = `
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Date</th>
+            <th>Time</th>
+            <th>Guests</th>
+            <th>Table</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${myReservations.map(r => `
+            <tr>
+              <td style="color:var(--text-muted); font-size:0.8rem;">#${r.id}</td>
+              <td>${fmtDate(r.date)}</td>
+              <td>${r.time}</td>
+              <td>${r.guests} guest${r.guests > 1 ? 's' : ''}</td>
+              <td>${r.tableLabel || '<span style="color:var(--text-muted)">—</span>'}</td>
+              <td>${statusBadge(r.status)}</td>
+              <td>
+                ${r.status === 'Reserved' ? `
+                  <button class="btn btn-danger btn-sm" onclick="cancelReservation(${r.id})">Cancel</button>
+                ` : ''}
+                ${r.status === 'Checked-In' ? `
+                  <button class="btn btn-gold btn-sm" onclick="openPayModal(${r.id}, ${r.guests})">💳 Pay Bill</button>
+                ` : ''}
+                ${r.status === 'Completed' ? `<span style="color:var(--success);font-size:0.8rem;">✅ Paid</span>` : ''}
+              </td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function updateStats() {
+  document.getElementById("myTotal").textContent     = myReservations.length;
+  document.getElementById("myReserved").textContent  = myReservations.filter(r => r.status === "Reserved").length;
+  document.getElementById("myCompleted").textContent = myReservations.filter(r => r.status === "Completed").length;
+}
+
+// ── Submit Reservation ────────────────────────────────────────
+async function submitReservation() {
+  const name   = document.getElementById("resName").value.trim();
+  const date   = document.getElementById("resDate").value;
+  const time   = document.getElementById("resTime").value;
+  const guests = parseInt(document.getElementById("resGuests").value);
+  const btn    = document.getElementById("submitResBtn");
+
+  if (!name || !date || !time) {
+    showToast("Please fill all fields.", "warning");
+    return;
+  }
+
+  const today = new Date().toISOString().split("T")[0];
+  if (date < today) {
+    showToast("Please select a future date.", "warning");
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Reserving...';
+
+  try {
+    const res = await api("POST", "/reservations", {
+      userId: currentUser.id,
+      customerName: name,
+      date, time, guests
+    });
+
+    showToast(`Reservation confirmed! ${res.tableLabel ? `Table: ${res.tableLabel}` : "Table will be assigned soon."}`, "success");
+
+    const note = document.getElementById("availNote");
+    note.textContent = res.tableLabel
+      ? `✅ Table assigned: ${res.tableLabel} (Seats ${res.tableCapacity || guests})`
+      : "⚠️ No suitable table available right now. Staff will assign one for you.";
+    note.style.display = "block";
+
+    await loadMyReservations();
+    await loadTables();
+
+    setTimeout(() => navigateTo("sec-my-reservations"), 1200);
+  } catch (e) {
+    showToast(e.message || "Failed to make reservation.", "error");
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = "Confirm Reservation";
+}
+
+// ── Cancel Reservation ────────────────────────────────────────
+async function cancelReservation(id) {
+  if (!confirm("Cancel this reservation? This cannot be undone.")) return;
+  try {
+    await api("DELETE", `/reservations/${id}`);
+    showToast("Reservation cancelled.", "info");
+    await loadMyReservations();
+    await loadTables();
+  } catch (e) {
+    showToast(e.message || "Failed to cancel.", "error");
+  }
+}
+
+// ── Pay Modal ─────────────────────────────────────────────────
+function openPayModal(id, guests) {
+  pendingPayId = id;
+  const amount = (guests * 25 + 10).toFixed(2);
+  document.getElementById("payDetails").innerHTML = `
+    <div>Reservation ID: <strong>#${id}</strong></div>
+    <div>Guests: <strong>${guests}</strong></div>
+    <div style="margin-top:0.5rem; padding-top:0.5rem; border-top:1px solid var(--glass-border);">
+      Total Amount: <strong style="color:var(--gold); font-size:1.1rem;">$${amount}</strong>
+    </div>
+  `;
+  document.getElementById("confirmPayBtn").onclick = () => processPayment(id);
+  document.getElementById("payModal").classList.add("open");
+}
+
+async function processPayment(id) {
+  const btn = document.getElementById("confirmPayBtn");
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Processing...';
+  try {
+    const result = await api("POST", `/payments/${id}`);
+    closeModal("payModal");
+    showToast(`Payment of $${result.amount} successful! 🎉`, "success");
+    await loadMyReservations();
+    await loadTables();
+  } catch (e) {
+    showToast(e.message || "Payment failed.", "error");
+  }
+  btn.disabled = false;
+  btn.innerHTML = "Pay Now";
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove("open");
+}
+
+function navigateTo(section) {
+  document.querySelectorAll(".sidebar-menu a").forEach(l => l.classList.remove("active"));
+  document.querySelectorAll(".content-section").forEach(s => s.classList.remove("active"));
+  const link = document.querySelector(`[data-section="${section}"]`);
+  if (link) link.classList.add("active");
+  const sec = document.getElementById(section);
+  if (sec) sec.classList.add("active");
+  const note = document.getElementById("availNote");
+  if (note) note.style.display = "none";
+}
+</script>
+</body>
+</html>

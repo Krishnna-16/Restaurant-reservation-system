@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Dashboard — Fork & Flames</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+</head>
+<body>
+<div id="toast-container"></div>
+
+<!-- ── Topbar ── -->
+<header class="topbar">
+  <a class="topbar-brand" href="#">
+    <span class="brand-icon">🍽️</span>
+    Fork & Flames
+  </a>
+  <div class="topbar-right">
+    <div class="user-badge">
+      <span id="userNameDisplay">—</span>
+      <span class="role-tag">Admin</span>
+    </div>
+    <button class="btn btn-logout" id="logoutBtn">Sign Out</button>
+  </div>
+</header>
+
+<!-- ── Dashboard ── -->
+<div class="dashboard">
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <ul class="sidebar-menu">
+      <li><a href="#" class="active" data-section="sec-analytics">
+        <span class="menu-icon">📊</span> Analytics
+      </a></li>
+      <li><a href="#" data-section="sec-all-reservations">
+        <span class="menu-icon">📋</span> Reservations
+      </a></li>
+      <li><a href="#" data-section="sec-manage-tables">
+        <span class="menu-icon">🪑</span> Manage Tables
+      </a></li>
+      <li><a href="#" data-section="sec-payments">
+        <span class="menu-icon">💰</span> Payments
+      </a></li>
+    </ul>
+  </nav>
+
+  <!-- Content -->
+  <main class="content-area">
+
+    <!-- ── Analytics ── -->
+    <section class="content-section active" id="sec-analytics">
+      <div class="section-header">
+        <div>
+          <h2 class="section-title">Analytics Dashboard</h2>
+          <p class="section-subtitle">Restaurant performance overview</p>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="loadAll()">↻ Refresh All</button>
+      </div>
+
+      <!-- KPI Stats -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon">📋</div>
+          <div class="stat-info">
+            <div class="stat-value" id="kpiTotal">—</div>
+            <div class="stat-label">Total Reservations</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🔵</div>
+          <div class="stat-info">
+            <div class="stat-value" id="kpiReserved">—</div>
+            <div class="stat-label">Reserved</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🟡</div>
+          <div class="stat-info">
+            <div class="stat-value" id="kpiCheckedIn">—</div>
+            <div class="stat-label">Checked-In</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🟢</div>
+          <div class="stat-info">
+            <div class="stat-value" id="kpiCompleted">—</div>
+            <div class="stat-label">Completed</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🪑</div>
+          <div class="stat-info">
+            <div class="stat-value" id="kpiVacant">—</div>
+            <div class="stat-label">Vacant Tables</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">💰</div>
+          <div class="stat-info">
+            <div class="stat-value" id="kpiRevenue">—</div>
+            <div class="stat-label">Total Revenue</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Charts -->
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.25rem; margin-top:0.5rem;">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">📊 Reservation Status</span>
+          </div>
+          <div class="chart-container">
+            <canvas id="statusChart"></canvas>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">📈 Reservations (Last 7 Days)</span>
+          </div>
+          <div class="chart-container">
+            <canvas id="trendChart"></canvas>
+          </div>
+        </div>
+        <div class="card" style="grid-column:1/-1;">
+          <div class="card-header">
+            <span class="card-title">🪑 Table Utilization</span>
+          </div>
+          <div class="chart-container" style="height:220px;">
+            <canvas id="tableChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── All Reservations ── -->
+    <section class="content-section" id="sec-all-reservations">
+      <div class="section-header">
+        <div>
+          <h2 class="section-title">All Reservations</h2>
+          <p class="section-subtitle">Full booking history</p>
+        </div>
+        <div style="display:flex;gap:0.6rem;">
+          <select id="adminFilter" class="form-control" style="width:160px;padding:0.45rem 0.75rem;" onchange="renderAdminReservations()">
+            <option value="">All Statuses</option>
+            <option value="Reserved">Reserved</option>
+            <option value="Checked-In">Checked-In</option>
+            <option value="Completed">Completed</option>
+          </select>
+          <button class="btn btn-ghost btn-sm" onclick="loadReservations()">↻ Refresh</button>
+        </div>
+      </div>
+      <div class="card">
+        <div id="adminReservationsContainer">
+          <div style="text-align:center;padding:2rem;"><span class="spinner"></span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Manage Tables ── -->
+    <section class="content-section" id="sec-manage-tables">
+      <div class="section-header">
+        <div>
+          <h2 class="section-title">Manage Tables</h2>
+          <p class="section-subtitle">Add, remove and update restaurant tables</p>
+        </div>
+        <button class="btn btn-gold" onclick="document.getElementById('addTableModal').classList.add('open')">
+          + Add Table
+        </button>
+      </div>
+
+      <!-- Table Status Grid -->
+      <div class="table-grid" id="adminTablesGrid">
+        <div style="grid-column:1/-1;text-align:center;padding:2rem;"><span class="spinner"></span></div>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- Tables management list -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">🪑 All Tables</span>
+          <button class="btn btn-ghost btn-sm" onclick="loadTables()">↻ Refresh</button>
+        </div>
+        <div id="adminTablesList">
+          <div style="text-align:center;padding:2rem;"><span class="spinner"></span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Payments ── -->
+    <section class="content-section" id="sec-payments">
+      <div class="section-header">
+        <div>
+          <h2 class="section-title">Payment Records</h2>
+          <p class="section-subtitle">All completed transactions</p>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="loadPayments()">↻ Refresh</button>
+      </div>
+      <div class="card">
+        <div id="paymentsContainer">
+          <div style="text-align:center;padding:2rem;"><span class="spinner"></span></div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- Add Table Modal -->
+<div class="modal-overlay" id="addTableModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>🪑 Add New Table</h3>
+      <button class="modal-close" onclick="closeModal('addTableModal')">✕</button>
+    </div>
+    <div class="form-group">
+      <label>Table Label</label>
+      <input type="text" id="newTableLabel" class="form-control" placeholder="e.g. Table E1" />
+    </div>
+    <div class="form-group">
+      <label>Seating Capacity</label>
+      <select id="newTableCapacity" class="form-control">
+        <option value="2">2 Seats</option>
+        <option value="4" selected>4 Seats</option>
+        <option value="6">6 Seats</option>
+        <option value="8">8 Seats</option>
+        <option value="10">10 Seats</option>
+        <option value="12">12 Seats</option>
+      </select>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('addTableModal')">Cancel</button>
+      <button class="btn btn-gold" onclick="addTable()">Add Table</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Table Modal -->
+<div class="modal-overlay" id="editTableModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>✏️ Edit Table</h3>
+      <button class="modal-close" onclick="closeModal('editTableModal')">✕</button>
+    </div>
+    <input type="hidden" id="editTableId" />
+    <div class="form-group">
+      <label>Table Label</label>
+      <input type="text" id="editTableLabel" class="form-control" />
+    </div>
+    <div class="form-group">
+      <label>Seating Capacity</label>
+      <select id="editTableCapacity" class="form-control">
+        <option value="2">2</option>
+        <option value="4">4</option>
+        <option value="6">6</option>
+        <option value="8">8</option>
+        <option value="10">10</option>
+        <option value="12">12</option>
+      </select>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('editTableModal')">Cancel</button>
+      <button class="btn btn-gold" onclick="saveEditTable()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<script src="script.js"></script>
+<script>
+let currentUser = null;
+let allReservations = [];
+let allTables = [];
+let charts = {};
+
+window.addEventListener("DOMContentLoaded", async () => {
+  currentUser = Session.require("admin");
+  if (!currentUser) return;
+  document.getElementById("userNameDisplay").textContent = currentUser.username;
+  initSidebar();
+  initLogout();
+  await loadAll();
+});
+
+async function loadAll() {
+  await Promise.all([loadAnalytics(), loadReservations(), loadTables(), loadPayments()]);
+}
+
+// ── Analytics ─────────────────────────────────────────────────
+async function loadAnalytics() {
+  try {
+    const [summary, payments, tables] = await Promise.all([
+      api("GET", "/reservations/analytics/summary"),
+      api("GET", "/payments"),
+      api("GET", "/tables"),
+    ]);
+
+    allTables = tables;
+
+    document.getElementById("kpiTotal").textContent     = summary.total;
+    document.getElementById("kpiReserved").textContent  = summary.reserved;
+    document.getElementById("kpiCheckedIn").textContent = summary.checkedIn;
+    document.getElementById("kpiCompleted").textContent = summary.completed;
+    document.getElementById("kpiVacant").textContent    = tables.filter(t => t.status === "Vacant").length;
+
+    const revenue = payments.reduce((sum, p) => sum + p.amount, 0);
+    document.getElementById("kpiRevenue").textContent   = `$${revenue.toFixed(0)}`;
+
+    renderCharts(summary, tables);
+  } catch (e) {
+    showToast("Failed to load analytics", "error");
+  }
+}
+
+function renderCharts(summary, tables) {
+  const chartDefaults = {
+    color: "#e8e4dc",
+    borderColor: "rgba(255,255,255,0.1)",
+    plugins: {
+      legend: { labels: { color: "#e8e4dc", font: { family: "DM Sans" } } },
+    },
+    scales: {
+      x: { ticks: { color: "#888" }, grid: { color: "rgba(255,255,255,0.05)" } },
+      y: { ticks: { color: "#888" }, grid: { color: "rgba(255,255,255,0.05)" } },
+    },
+  };
+
+  // Destroy existing
+  Object.values(charts).forEach(c => c.destroy());
+  charts = {};
+
+  // Status donut chart
+  charts.status = new Chart(document.getElementById("statusChart"), {
+    type: "doughnut",
+    data: {
+      labels: ["Reserved", "Checked-In", "Completed", "Cancelled"],
+      datasets: [{
+        data: [summary.reserved, summary.checkedIn, summary.completed, summary.cancelled],
+        backgroundColor: ["#5b9cde", "#e8a545", "#4caf81", "#e05c5c"],
+        borderWidth: 0,
+        hoverOffset: 6,
+      }],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      cutout: "65%",
+      plugins: { legend: { position: "right", labels: { color: "#e8e4dc", font: { family: "DM Sans" } } } },
+    },
+  });
+
+  // Trend line chart
+  const days = summary.perDay || [];
+  charts.trend = new Chart(document.getElementById("trendChart"), {
+    type: "line",
+    data: {
+      labels: days.map(d => d.date),
+      datasets: [{
+        label: "Reservations",
+        data: days.map(d => d.count),
+        borderColor: "#c9a84c",
+        backgroundColor: "rgba(201,168,76,0.1)",
+        fill: true,
+        tension: 0.4,
+        pointBackgroundColor: "#c9a84c",
+        pointRadius: 4,
+      }],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: "#e8e4dc" } } },
+      scales: {
+        x: { ticks: { color: "#888" }, grid: { color: "rgba(255,255,255,0.05)" } },
+        y: { ticks: { color: "#888", stepSize: 1 }, grid: { color: "rgba(255,255,255,0.05)" }, beginAtZero: true },
+      },
+    },
+  });
+
+  // Table utilization bar chart
+  const statusCounts = { Vacant: 0, Reserved: 0, Occupied: 0 };
+  tables.forEach(t => statusCounts[t.status]++);
+  charts.table = new Chart(document.getElementById("tableChart"), {
+    type: "bar",
+    data: {
+      labels: ["Vacant", "Reserved", "Occupied"],
+      datasets: [{
+        label: "Tables",
+        data: [statusCounts.Vacant, statusCounts.Reserved, statusCounts.Occupied],
+        backgroundColor: ["rgba(76,175,129,0.7)", "rgba(91,156,222,0.7)", "rgba(224,92,92,0.7)"],
+        borderRadius: 6,
+        borderWidth: 0,
+      }],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: "#888" }, grid: { display: false } },
+        y: { ticks: { color: "#888", stepSize: 1 }, grid: { color: "rgba(255,255,255,0.05)" }, beginAtZero: true },
+      },
+    },
+  });
+}
+
+// ── Reservations ──────────────────────────────────────────────
+async function loadReservations() {
+  try {
+    allReservations = await api("GET", "/reservations");
+    renderAdminReservations();
+  } catch (e) {
+    document.getElementById("adminReservationsContainer").innerHTML =
+      '<div class="empty-state"><div class="empty-icon">⚠️</div><p>Failed to load</p></div>';
+  }
+}
+
+function renderAdminReservations() {
+  const filter = document.getElementById("adminFilter").value;
+  const data = filter ? allReservations.filter(r => r.status === filter) : allReservations;
+  const container = document.getElementById("adminReservationsContainer");
+
+  if (data.length === 0) {
+    container.innerHTML = '<div class="empty-state"><div class="empty-icon">📋</div><p>No reservations found</p></div>';
+    return;
+  }
+
+  container.innerHTML = `
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Customer</th>
+            <th>Date</th>
+            <th>Time</th>
+            <th>Guests</th>
+            <th>Table</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${data.map(r => `
+            <tr>
+              <td style="color:var(--text-muted); font-size:0.8rem;">#${r.id}</td>
+              <td style="font-weight:500;">${r.customerName}</td>
+              <td>${fmtDate(r.date)}</td>
+              <td>${r.time}</td>
+              <td>${r.guests}</td>
+              <td>${r.tableLabel || '<span style="color:var(--text-muted)">—</span>'}</td>
+              <td>${statusBadge(r.status)}</td>
+              <td>
+                ${r.status === 'Reserved' ? `
+                  <button class="btn btn-info btn-sm" onclick="adminCheckIn(${r.id})">✓ Check-In</button>
+                  <button class="btn btn-danger btn-sm" onclick="adminCancel(${r.id})">✕</button>
+                ` : ''}
+                ${r.status === 'Checked-In' ? `
+                  <button class="btn btn-success btn-sm" onclick="adminComplete(${r.id})">Complete</button>
+                ` : ''}
+                ${r.status === 'Completed' ? `<span style="color:var(--success);font-size:0.8rem;">✅</span>` : ''}
+              </td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+async function adminCheckIn(id) {
+  try {
+    await api("PUT", `/reservations/checkin/${id}`);
+    showToast(`Checked in #${id}`, "success");
+    await loadAll();
+  } catch (e) { showToast(e.message, "error"); }
+}
+
+async function adminCancel(id) {
+  if (!confirm("Cancel this reservation?")) return;
+  try {
+    await api("DELETE", `/reservations/${id}`);
+    showToast("Reservation cancelled.", "info");
+    await loadAll();
+  } catch (e) { showToast(e.message, "error"); }
+}
+
+async function adminComplete(id) {
+  try {
+    await api("PUT", `/reservations/complete/${id}`);
+    showToast(`Reservation #${id} marked as Completed.`, "success");
+    await loadAll();
+  } catch (e) { showToast(e.message, "error"); }
+}
+
+// ── Tables ────────────────────────────────────────────────────
+async function loadTables() {
+  const grid = document.getElementById("adminTablesGrid");
+  const list = document.getElementById("adminTablesList");
+  grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:1rem;"><span class="spinner"></span></div>';
+
+  try {
+    allTables = await api("GET", "/tables");
+
+    // Grid view
+    grid.innerHTML = allTables.map(t => `
+      <div class="table-card ${t.status.toLowerCase()}">
+        <div class="table-icon">${t.status === 'Vacant' ? '🟢' : t.status === 'Occupied' ? '🔴' : '🔵'}</div>
+        <div class="table-label">${t.label}</div>
+        <div class="table-cap">Seats ${t.capacity}</div>
+        <div style="margin-top:0.5rem;">${statusBadge(t.status)}</div>
+      </div>
+    `).join("");
+
+    // List view with management actions
+    list.innerHTML = `
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Label</th>
+              <th>Capacity</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${allTables.map(t => `
+              <tr>
+                <td style="color:var(--text-muted);">#${t.tableId}</td>
+                <td style="font-weight:500;">${t.label}</td>
+                <td>${t.capacity} seats</td>
+                <td>${statusBadge(t.status)}</td>
+                <td>
+                  <button class="btn btn-ghost btn-sm" onclick="openEditTable(${t.tableId}, '${t.label}', ${t.capacity})">✏️ Edit</button>
+                  ${t.status === 'Vacant' ? `<button class="btn btn-danger btn-sm" onclick="deleteTable(${t.tableId})">🗑️ Delete</button>` : ''}
+                </td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      </div>
+    `;
+  } catch (e) {
+    grid.innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><p>Failed to load tables</p></div>';
+    showToast("Failed to load tables", "error");
+  }
+}
+
+async function addTable() {
+  const label    = document.getElementById("newTableLabel").value.trim();
+  const capacity = document.getElementById("newTableCapacity").value;
+  try {
+    await api("POST", "/tables", { label, capacity: parseInt(capacity) });
+    showToast("Table added successfully!", "success");
+    closeModal("addTableModal");
+    document.getElementById("newTableLabel").value = "";
+    await loadAll();
+  } catch (e) { showToast(e.message, "error"); }
+}
+
+function openEditTable(id, label, capacity) {
+  document.getElementById("editTableId").value    = id;
+  document.getElementById("editTableLabel").value = label;
+  document.getElementById("editTableCapacity").value = capacity;
+  document.getElementById("editTableModal").classList.add("open");
+}
+
+async function saveEditTable() {
+  const id       = document.getElementById("editTableId").value;
+  const label    = document.getElementById("editTableLabel").value.trim();
+  const capacity = document.getElementById("editTableCapacity").value;
+  try {
+    await api("PUT", `/tables/${id}`, { label, capacity: parseInt(capacity) });
+    showToast("Table updated!", "success");
+    closeModal("editTableModal");
+    await loadAll();
+  } catch (e) { showToast(e.message, "error"); }
+}
+
+async function deleteTable(id) {
+  if (!confirm("Delete this table? This cannot be undone.")) return;
+  try {
+    await api("DELETE", `/tables/${id}`);
+    showToast("Table deleted.", "info");
+    await loadAll();
+  } catch (e) { showToast(e.message, "error"); }
+}
+
+// ── Payments ──────────────────────────────────────────────────
+async function loadPayments() {
+  const container = document.getElementById("paymentsContainer");
+  try {
+    const payments = await api("GET", "/payments");
+    if (payments.length === 0) {
+      container.innerHTML = '<div class="empty-state"><div class="empty-icon">💰</div><p>No payments yet</p></div>';
+      return;
+    }
+    container.innerHTML = `
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Customer</th>
+              <th>Date</th>
+              <th>Guests</th>
+              <th>Amount</th>
+              <th>Status</th>
+              <th>Paid At</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${payments.map(p => `
+              <tr>
+                <td style="color:var(--text-muted); font-size:0.8rem;">#${p.id}</td>
+                <td style="font-weight:500;">${p.customerName}</td>
+                <td>${fmtDate(p.date)}</td>
+                <td>${p.guests}</td>
+                <td style="color:var(--gold); font-weight:600;">$${p.amount.toFixed(2)}</td>
+                <td>${statusBadge(p.status === 'Paid' ? 'Completed' : 'Reserved')}</td>
+                <td style="color:var(--text-muted); font-size:0.8rem;">${p.paid_at ? new Date(p.paid_at).toLocaleString() : '—'}</td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      </div>
+    `;
+  } catch (e) {
+    container.innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><p>Failed to load payments</p></div>';
+  }
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove("open");
+}
+</script>
+</body>
+</html>

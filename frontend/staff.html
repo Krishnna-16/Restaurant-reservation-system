@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Staff Dashboard — Fork & Flames</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div id="toast-container"></div>
+
+<!-- ── Topbar ── -->
+<header class="topbar">
+  <a class="topbar-brand" href="#">
+    <span class="brand-icon">🍽️</span>
+    Fork & Flames
+  </a>
+  <div class="topbar-right">
+    <div class="user-badge">
+      <span id="userNameDisplay">—</span>
+      <span class="role-tag">Staff</span>
+    </div>
+    <button class="btn btn-logout" id="logoutBtn">Sign Out</button>
+  </div>
+</header>
+
+<!-- ── Dashboard ── -->
+<div class="dashboard">
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <ul class="sidebar-menu">
+      <li><a href="#" class="active" data-section="sec-all-reservations">
+        <span class="menu-icon">📋</span> All Reservations
+      </a></li>
+      <li><a href="#" data-section="sec-tables">
+        <span class="menu-icon">🪑</span> Table Status
+      </a></li>
+    </ul>
+  </nav>
+
+  <!-- Content -->
+  <main class="content-area">
+
+    <!-- ── All Reservations ── -->
+    <section class="content-section active" id="sec-all-reservations">
+      <div class="section-header">
+        <div>
+          <h2 class="section-title">All Reservations</h2>
+          <p class="section-subtitle">Manage check-ins and guest arrivals</p>
+        </div>
+        <div style="display:flex;gap:0.6rem;align-items:center;">
+          <select id="statusFilter" class="form-control" style="width:160px; padding:0.45rem 0.75rem;" onchange="renderReservations()">
+            <option value="">All Statuses</option>
+            <option value="Reserved">Reserved</option>
+            <option value="Checked-In">Checked-In</option>
+            <option value="Completed">Completed</option>
+          </select>
+          <button class="btn btn-ghost btn-sm" onclick="loadReservations()">↻ Refresh</button>
+        </div>
+      </div>
+
+      <!-- Quick Stats -->
+      <div class="stats-grid" style="grid-template-columns:repeat(3,1fr)">
+        <div class="stat-card">
+          <div class="stat-icon">🔵</div>
+          <div class="stat-info">
+            <div class="stat-value" id="cntReserved">—</div>
+            <div class="stat-label">Reserved</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🟡</div>
+          <div class="stat-info">
+            <div class="stat-value" id="cntCheckedIn">—</div>
+            <div class="stat-label">Checked-In</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🟢</div>
+          <div class="stat-info">
+            <div class="stat-value" id="cntCompleted">—</div>
+            <div class="stat-label">Completed</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:0.5rem;">
+        <div id="reservationsContainer">
+          <div style="text-align:center;padding:2rem;"><span class="spinner"></span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Table Status ── -->
+    <section class="content-section" id="sec-tables">
+      <div class="section-header">
+        <div>
+          <h2 class="section-title">Table Status</h2>
+          <p class="section-subtitle">Live view of all tables</p>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="loadTables()">↻ Refresh</button>
+      </div>
+      <div class="table-grid" id="tablesGrid">
+        <div style="grid-column:1/-1;text-align:center;padding:2rem;"><span class="spinner"></span></div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script src="script.js"></script>
+<script>
+let currentUser = null;
+let allReservations = [];
+
+window.addEventListener("DOMContentLoaded", async () => {
+  currentUser = Session.require("staff");
+  if (!currentUser) return;
+  document.getElementById("userNameDisplay").textContent = currentUser.username;
+  initSidebar();
+  initLogout();
+  await Promise.all([loadReservations(), loadTables()]);
+});
+
+// ── Load Reservations ─────────────────────────────────────────
+async function loadReservations() {
+  try {
+    allReservations = await api("GET", "/reservations");
+    renderReservations();
+    updateStats();
+  } catch (e) {
+    document.getElementById("reservationsContainer").innerHTML =
+      '<div class="empty-state"><div class="empty-icon">⚠️</div><p>Failed to load reservations</p></div>';
+    showToast("Failed to load reservations", "error");
+  }
+}
+
+function updateStats() {
+  document.getElementById("cntReserved").textContent   = allReservations.filter(r => r.status === "Reserved").length;
+  document.getElementById("cntCheckedIn").textContent  = allReservations.filter(r => r.status === "Checked-In").length;
+  document.getElementById("cntCompleted").textContent  = allReservations.filter(r => r.status === "Completed").length;
+}
+
+function renderReservations() {
+  const filter = document.getElementById("statusFilter").value;
+  const filtered = filter ? allReservations.filter(r => r.status === filter) : allReservations;
+  const container = document.getElementById("reservationsContainer");
+
+  if (filtered.length === 0) {
+    container.innerHTML = '<div class="empty-state"><div class="empty-icon">📋</div><p>No reservations found</p></div>';
+    return;
+  }
+
+  container.innerHTML = `
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Customer</th>
+            <th>Date</th>
+            <th>Time</th>
+            <th>Guests</th>
+            <th>Table</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${filtered.map(r => `
+            <tr>
+              <td style="color:var(--text-muted); font-size:0.8rem;">#${r.id}</td>
+              <td style="font-weight:500;">${r.customerName}</td>
+              <td>${fmtDate(r.date)}</td>
+              <td>${r.time}</td>
+              <td>${r.guests}</td>
+              <td>${r.tableLabel || '<span style="color:var(--text-muted)">—</span>'}</td>
+              <td>${statusBadge(r.status)}</td>
+              <td>
+                ${r.status === 'Reserved' ? `
+                  <button class="btn btn-info btn-sm" onclick="checkIn(${r.id})">✓ Check-In</button>
+                ` : ''}
+                ${r.status === 'Checked-In' ? `
+                  <span style="color:var(--warning); font-size:0.8rem;">Awaiting payment</span>
+                ` : ''}
+                ${r.status === 'Completed' ? `
+                  <span style="color:var(--success); font-size:0.8rem;">✅ Done</span>
+                ` : ''}
+              </td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+// ── Check In ──────────────────────────────────────────────────
+async function checkIn(id) {
+  if (!confirm(`Mark reservation #${id} as Checked-In?`)) return;
+  try {
+    await api("PUT", `/reservations/checkin/${id}`);
+    showToast(`Reservation #${id} checked in! Guest can now pay.`, "success");
+    await loadReservations();
+    await loadTables();
+  } catch (e) {
+    showToast(e.message || "Failed to check in.", "error");
+  }
+}
+
+// ── Load Tables ───────────────────────────────────────────────
+async function loadTables() {
+  const grid = document.getElementById("tablesGrid");
+  grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:1rem;"><span class="spinner"></span></div>';
+  try {
+    const tables = await api("GET", "/tables");
+    if (tables.length === 0) {
+      grid.innerHTML = '<div class="empty-state"><div class="empty-icon">🪑</div><p>No tables found</p></div>';
+      return;
+    }
+    grid.innerHTML = tables.map(t => `
+      <div class="table-card ${t.status.toLowerCase()}">
+        <div class="table-icon">${t.status === 'Vacant' ? '🟢' : t.status === 'Occupied' ? '🔴' : '🔵'}</div>
+        <div class="table-label">${t.label}</div>
+        <div class="table-cap">Seats ${t.capacity}</div>
+        <div style="margin-top:0.5rem;">${statusBadge(t.status)}</div>
+      </div>
+    `).join("");
+  } catch (e) {
+    grid.innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><p>Failed to load tables</p></div>';
+  }
+}
+</script>
+</body>
+</html>

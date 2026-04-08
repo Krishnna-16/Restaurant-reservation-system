@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sign In — Fork & Flames</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    .login-page::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Ccircle cx='50' cy='50' r='1' fill='rgba(201,168,76,0.15)'/%3E%3C/svg%3E") repeat;
+      opacity: 0.4;
+      pointer-events: none;
+    }
+
+    .error-msg {
+      background: rgba(224,92,92,0.12);
+      border: 1px solid rgba(224,92,92,0.3);
+      border-radius: var(--radius-sm);
+      color: #ff8a8a;
+      padding: 0.7rem 1rem;
+      font-size: 0.85rem;
+      margin-bottom: 1rem;
+      display: none;
+    }
+
+    .error-msg.show { display: block; }
+  </style>
+</head>
+<body>
+<div id="toast-container"></div>
+
+<div class="login-page">
+  <div class="login-container">
+
+    <div class="login-logo">
+      <span class="logo-icon">🍽️</span>
+      <h1>Fork & Flames</h1>
+      <p>Reserve the Moment</p>
+    </div>
+
+    <div class="login-card">
+      <h3 style="margin-bottom:1.5rem; font-size:1.1rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.1em; font-family:'DM Sans';">Sign In</h3>
+
+      <!-- Role Selector -->
+      <div class="form-group">
+        <label>Select Your Role</label>
+        <div class="role-selector">
+          <button class="role-btn active" data-role="customer" onclick="selectRole('customer', this)">
+            <span class="role-emoji">👤</span>
+            Customer
+          </button>
+          <button class="role-btn" data-role="staff" onclick="selectRole('staff', this)">
+            <span class="role-emoji">👨‍🍳</span>
+            Staff
+          </button>
+          <button class="role-btn" data-role="admin" onclick="selectRole('admin', this)">
+            <span class="role-emoji">🧑‍💼</span>
+            Admin
+          </button>
+        </div>
+        <input type="hidden" id="roleInput" value="customer" />
+      </div>
+
+      <!-- Error -->
+      <div class="error-msg" id="errorMsg"></div>
+
+      <!-- Form -->
+      <div class="form-group">
+        <label for="username">Username</label>
+        <input type="text" id="username" class="form-control" placeholder="Enter username" autocomplete="username" />
+      </div>
+
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" class="form-control" placeholder="Enter password" autocomplete="current-password" />
+      </div>
+
+      <button class="btn btn-gold btn-lg" style="width:100%; margin-top:0.5rem;" onclick="handleLogin()" id="loginBtn">
+        Sign In
+      </button>
+
+      <!-- Demo Credentials -->
+      <div class="demo-creds" id="demoCreds">
+        <strong>Demo Credentials</strong>
+        <span id="demoText">Username: <code>Divya</code> · Password: <code>Divya123</code></span>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="script.js"></script>
+<script>
+const DEMO = {
+  customer: "Username: <code>Divya</code> · Password: <code>Divya123</code>",
+  staff:    "Username: <code>staff1</code> · Password: <code>staff123</code>",
+  admin:    "Username: <code>Krishnna</code> · Password: <code>Krishnna123</code>",
+};
+
+// Auto-login check
+window.addEventListener("DOMContentLoaded", () => {
+  const user = Session.get();
+  if (user) {
+    console.log("🔄 Auto-login:", user.username);
+    redirect(user.role);
+  }
+});
+
+function selectRole(role, btn) {
+  document.querySelectorAll(".role-btn").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+  document.getElementById("roleInput").value = role;
+  document.getElementById("demoText").innerHTML = DEMO[role];
+
+  // Pre-fill demo credentials
+  const fills = {
+    customer: ["Divya",   "Divya123"],
+    staff:    ["staff1", "staff123"],
+    admin:    ["Krishnna",  "Krishnna123"],
+  };
+  document.getElementById("username").value = fills[role][0];
+  document.getElementById("password").value = fills[role][1];
+}
+
+async function handleLogin() {
+  const username = document.getElementById("username").value.trim();
+  const password = document.getElementById("password").value.trim();
+  const role     = document.getElementById("roleInput").value;
+  const btn      = document.getElementById("loginBtn");
+  const err      = document.getElementById("errorMsg");
+
+  if (!username || !password) {
+    showError("Please enter your username and password.");
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = "Signing in...";
+  err.classList.remove("show");
+
+  try {
+    const res = await api("POST", "/users/login", {
+      username,
+      password,
+      role
+    });
+
+    // ✅ SAFE CHECK
+    if (!res || !res.user) {
+      throw new Error("Invalid server response");
+    }
+
+    Session.set(res.user);
+
+    showToast(`Welcome ${res.user.username}!`, "success");
+
+    setTimeout(() => {
+      redirect(res.user.role);
+    }, 500);
+
+  } catch (e) {
+    console.error("LOGIN ERROR:", e);
+    showError(e.message || "Login failed");
+
+    btn.disabled = false;
+    btn.innerHTML = "Sign In";
+  }
+}
+
+function showError(msg) {
+  const el = document.getElementById("errorMsg");
+  el.textContent = msg;
+  el.classList.add("show");
+}
+
+function redirect(role) {
+  const map = { customer: "/customer.html", staff: "/staff.html", admin: "/admin.html" };
+  window.location.href = map[role] || "/login.html";
+}
+
+// Enter key support
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") handleLogin();
+});
+</script>
+</body>
+</html>
